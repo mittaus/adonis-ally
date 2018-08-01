@@ -20,6 +20,7 @@ const LinkedIn = drivers.linkedin
 const Instagram = drivers.instagram
 const Twitter = drivers.twitter
 const Foursquare = drivers.foursquare
+const Microsoft = drivers.microsoft
 
 test.group('Oauth Drivers | Google', function () {
   test('should throw an exception when config has not been defined', function (assert) {
@@ -103,6 +104,93 @@ test.group('Oauth Drivers | Google', function () {
     google._getUserProfile = () => ({})
 
     const user = await google.getUser({ code: '12345' })
+
+    assert.equal(user.getExpires(), 12345)
+  })
+})
+
+test.group('Oauth Drivers | Microsoft', function () {
+  test('should throw an exception when config has not been defined', function (assert) {
+    const microsoft = () => new Microsoft({get: function () { return null }})
+    assert.throw(microsoft, 'E_MISSING_CONFIG: microsoft is not defined inside config/services.js file')
+  })
+
+  test('should throw an exception when clientid is missing', function (assert) {
+    const microsoft = () => new Microsoft({get: function () { return {clientSecret: '1', redirectUri: '2'} }})
+    assert.throw(microsoft, 'E_MISSING_CONFIG: microsoft is not defined inside config/services.js file')
+  })
+
+  test('should throw an exception when clientSecret is missing', function (assert) {
+    const microsoft = () => new Microsoft({get: function () { return {clientId: '1', redirectUri: '2'} }})
+    assert.throw(microsoft, 'E_MISSING_CONFIG: microsoft is not defined inside config/services.js file')
+  })
+
+  test('should throw an exception when redirectUri is missing', function (assert) {
+    const microsoft = () => new Microsoft({get: function () { return {clientId: '1', clientSecret: '2'} }})
+    assert.throw(microsoft, 'E_MISSING_CONFIG: microsoft is not defined inside config/services.js file')
+  })
+
+  test('should generate the redirect_uri with correct signature', async function (assert) {
+    const microsoft = new Microsoft(config)
+    const redirectUrl = qs.escape(config.get().redirectUri)
+    const scope = qs.escape(['openid', 'profile', 'email'].join(' '))
+    const providerUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?redirect_uri=${redirectUrl}&scope=${scope}&response_type=code&client_id=${config.get().clientId}`
+    const redirectToUrl = await microsoft.getRedirectUrl()
+    assert.equal(redirectToUrl, providerUrl)
+  })
+
+  test('should make use of the scopes defined in the config file', async function (assert) {
+    const customConfig = {
+      get: function () {
+        return {
+          clientId: 12,
+          clientSecret: 123,
+          redirectUri: 'http://localhost',
+          scope: ['foo', 'bar']
+        }
+      }
+    }
+    const microsoft = new Microsoft(customConfig)
+    const redirectUrl = qs.escape(customConfig.get().redirectUri)
+    const scope = qs.escape(['foo', 'bar'].join(' '))
+    const providerUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?redirect_uri=${redirectUrl}&scope=${scope}&response_type=code&client_id=${customConfig.get().clientId}`
+    const redirectToUrl = await microsoft.getRedirectUrl()
+    assert.equal(redirectToUrl, providerUrl)
+  })
+
+  test('should make use of the scopes passed to the generate method', async function (assert) {
+    const microsoft = new Microsoft(config)
+    const redirectUrl = qs.escape(config.get().redirectUri)
+    const scope = qs.escape(['foo'].join(' '))
+    const providerUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?redirect_uri=${redirectUrl}&scope=${scope}&response_type=code&client_id=${config.get().clientId}`
+    const redirectToUrl = await microsoft.getRedirectUrl(['foo'])
+    assert.equal(redirectToUrl, providerUrl)
+  })
+
+  test('should set expires_in to null if not provided', async function (assert) {
+    const microsoft = new Microsoft(config)
+
+    // Mock getAccessToken
+    microsoft.getAccessToken = () => ({})
+
+    // Mock _getUserProfile
+    microsoft._getUserProfile = () => ({})
+
+    const user = await microsoft.getUser({ code: '12345' })
+
+    assert.equal(user.getExpires(), null)
+  })
+
+  test('should correctly parse a valid expires_in', async function (assert) {
+    const microsoft = new Microsoft(config)
+
+    // Mock getAccessToken
+    microsoft.getAccessToken = () => ({ result: { expires_in: '12345' } })
+
+    // Mock _getUserProfile
+    microsoft._getUserProfile = () => ({})
+
+    const user = await microsoft.getUser({ code: '12345' })
 
     assert.equal(user.getExpires(), 12345)
   })

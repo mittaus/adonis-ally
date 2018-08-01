@@ -90,6 +90,21 @@ module.exports = {
       clientId: Env.get('FOURSQUARE_ID'),
       clientSecret: Env.get('FOURSQUARE_SECRET'),
       redirectUri: `${Env.get('APP_URL')}/authenticated/foursquare`
+    },
+
+    /*
+     |--------------------------------------------------------------------------
+     | Microsoft Outlook Configuration
+     |--------------------------------------------------------------------------
+     |
+     | You can access your application credentials from the Microsoft Outlook developers
+     | console. https://apps.dev.microsoft.com/
+     |
+     */
+    microsoft: {
+      clientId: Env.get('MICROSOFT_ID'),
+      clientSecret: Env.get('MICROSOFT_SECRET'),
+      redirectUri: `${Env.get('APP_URL')}/authenticated/foursquare`
     }
   }
 }
